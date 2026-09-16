@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using SecureLab.Api.Application.Incidents;
 using SecureLab.Api.Data.Entities;
 using SecureLab.Api.Presentation.Contracts;
@@ -21,12 +22,10 @@ public static class IncidentEndpoints
             .Produces<IncidentDetailsResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapGet("/severity-summary", () => Results.Problem(
-                title: "Точку розширення ще не реалізовано",
-                detail: "Завершіть цей endpoint під час лабораторної роботи № 1.",
-                statusCode: StatusCodes.Status501NotImplemented))
+        // ЗМІНЕНО: замість заглушки 501 викликаємо GetSeveritySummaryAsync
+        group.MapGet("/severity-summary", GetSeveritySummaryAsync)
             .WithName("GetIncidentSeveritySummary")
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .Produces<IncidentSeveritySummaryResponse>();
 
         return endpoints;
     }
@@ -66,5 +65,15 @@ public static class IncidentEndpoints
                 detail: $"Інцидент '{id}' не існує.",
                 statusCode: StatusCodes.Status404NotFound)
             : Results.Ok(incident);
+    }
+
+    // ДОДАНО: новий метод для обробки запиту статистики
+    private static async Task<IResult> GetSeveritySummaryAsync(
+        [FromQuery] IncidentStatus[]? status,
+        IncidentQueries queries,
+        CancellationToken cancellationToken)
+    {
+        var result = await queries.GetSeveritySummaryAsync(status, cancellationToken);
+        return Results.Ok(result);
     }
 }
