@@ -29,6 +29,30 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
                 incident.OccurredAtUtc,
                 incident.CreatedAtUtc))
             .ToListAsync(cancellationToken);
+
+        
+    }
+    public async Task<IncidentSeveritySummaryResponse> GetSeveritySummaryAsync(
+        IReadOnlyList<IncidentStatus>? statuses,
+        CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Loading severity summary for statuses: {Statuses}", statuses);
+
+        var query = dbContext.Incidents.AsNoTracking();
+
+        if (statuses is not null && statuses.Count > 0)
+        {
+            query = query.Where(incident => statuses.Contains(incident.Status));
+        }
+
+        var items = await query
+            .GroupBy(incident => incident.Severity)
+            .Select(group => new IncidentSeveritySummaryItem(
+                group.Key.ToString(),
+                group.Count()))
+            .ToListAsync(cancellationToken);
+
+        return new IncidentSeveritySummaryResponse(items);
     }
 
     public Task<IncidentDetailsResponse?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
@@ -59,3 +83,4 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
             .SingleOrDefaultAsync(cancellationToken);
     }
 }
+
