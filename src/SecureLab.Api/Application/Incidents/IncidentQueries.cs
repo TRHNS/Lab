@@ -51,7 +51,9 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
                 group.Key.ToString(),
                 group.Count()))
             .ToListAsync(cancellationToken);
-
+        // Структурований лог результату
+        logger.LogInformation("Сформовано підсумок за критичністю: знайдено {GroupCount} груп(и)", items.Count);
+        
         return new IncidentSeveritySummaryResponse(items);
     }
 
