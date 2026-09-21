@@ -23,7 +23,7 @@ public static class IncidentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
       
-        // замість дефолтної заглушки 501 Not Implemented підключено реальний метод обробки severity-summary
+        // замість дефолтної заглушки 501 Not Implemented підключено метод обробки severity-summary
        
         group.MapGet("/severity-summary", GetSeveritySummaryAsync)
             .WithName("GetIncidentSeveritySummary")
@@ -70,7 +70,7 @@ public static class IncidentEndpoints
     }
 
   
-    // ДОДАНО: новий метод-обробник для ендпоінта severity-summary, який приймає параметри, валідує їх та звертається до application-шару
+    // ДОДАНО: метод-обробник для ендпоінта severity-summary, який приймає параметри, валідує їх та звертається до application-шару
     
     private static async Task<IResult> GetSeveritySummaryAsync(
         [FromQuery] string[]? status,
