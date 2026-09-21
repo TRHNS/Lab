@@ -24,3 +24,7 @@ public sealed record IncidentCommentResponse(
     string AuthorDisplayName,
     string Text,
     DateTimeOffset CreatedAtUtc);
+
+public sealed record IncidentSeveritySummaryItem(string Severity, int Count);
+
+public sealed record IncidentSeveritySummaryResponse(IReadOnlyList<IncidentSeveritySummaryItem> Items);

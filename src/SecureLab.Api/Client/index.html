@@ -37,6 +37,14 @@
           <button type="submit">Застосувати</button>
         </form>
       </div>
+      <!-- Контейнер для статистики за критичністю-->
+    <div id="severity-summary-container" style="margin-bottom: 16px; padding: 12px; background-color: rgba(0,0,0,0.05); border-radius: 6px;">
+        <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 1rem;">Статистика за критичністю</h3>
+        <button id="load-summary-btn" type="button">Завантажити підсумок</button>
+        <p id="summary-status" role="status" style="margin: 8px 0; font-size: 0.9rem; color: #555;"></p>
+        <ul id="severity-summary-list" style="margin: 0; padding-left: 24px; font-size: 0.9rem;"></ul>
+      </div>
+      
       <ul id="incident-list" class="incident-list"></ul>
     </section>
 

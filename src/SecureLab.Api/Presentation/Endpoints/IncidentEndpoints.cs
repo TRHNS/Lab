@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using SecureLab.Api.Application.Incidents;
 using SecureLab.Api.Data.Entities;
 using SecureLab.Api.Presentation.Contracts;
@@ -21,12 +22,12 @@ public static class IncidentEndpoints
             .Produces<IncidentDetailsResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapGet("/severity-summary", () => Results.Problem(
-                title: "Точку розширення ще не реалізовано",
-                detail: "Завершіть цей endpoint під час лабораторної роботи № 1.",
-                statusCode: StatusCodes.Status501NotImplemented))
+      
+        // замість дефолтної заглушки 501 Not Implemented підключено реальний метод обробки severity-summary
+       
+        group.MapGet("/severity-summary", GetSeveritySummaryAsync)
             .WithName("GetIncidentSeveritySummary")
-            .ProducesProblem(StatusCodes.Status501NotImplemented);
+            .Produces<IncidentSeveritySummaryResponse>();
 
         return endpoints;
     }
@@ -66,5 +67,36 @@ public static class IncidentEndpoints
                 detail: $"Інцидент '{id}' не існує.",
                 statusCode: StatusCodes.Status404NotFound)
             : Results.Ok(incident);
+    }
+
+  
+    // ДОДАНО: новий метод-обробник для ендпоінта severity-summary, який приймає параметри, валідує їх та звертається до application-шару
+    
+    private static async Task<IResult> GetSeveritySummaryAsync(
+        [FromQuery] string[]? status,
+        IncidentQueries queries,
+        CancellationToken cancellationToken)
+    {
+        IncidentStatus[]? parsedStatuses = null;
+        if (status is not null && status.Length > 0)
+        {
+            var list = new List<IncidentStatus>();
+            foreach (var s in status)
+            {
+                // Перевірка та безпечне перетворення статусів з урахуванням регістру
+                if (!Enum.TryParse<IncidentStatus>(s, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+                {
+                    return Results.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["status"] = ["Допустимі значення: New, Triaged, InProgress, Resolved, Closed."]
+                    });
+                }
+                list.Add(parsed);
+            }
+            parsedStatuses = list.ToArray();
+        }
+
+        var result = await queries.GetSeveritySummaryAsync(parsedStatuses, cancellationToken);
+        return Results.Ok(result);
     }
 }

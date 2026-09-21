@@ -109,3 +109,44 @@ filterForm.addEventListener("submit", (event) => {
 });
 
 loadIncidents();
+// Знаходимо наші елементи
+const summaryBtn = document.getElementById('load-summary-btn');
+const summaryStatus = document.getElementById('summary-status');
+const summaryList = document.getElementById('severity-summary-list');
+
+// Окрема async-функція для отримання статистики
+async function loadSeveritySummary() {
+    //  Стан «Завантаження…» 
+    summaryStatus.textContent = 'Завантаження…';
+    summaryList.textContent = ''; 
+
+    try {
+        // Викликає apiFetch
+        const response = await apiFetch("/api/incidents/severity-summary");
+        
+        // Стан «Даних немає» 
+        if (!response.items || response.items.length === 0) {
+            summaryStatus.textContent = 'Даних немає';
+            return;
+        }
+
+        // Очищуємо статус після успішного отримання даних
+        summaryStatus.textContent = '';
+
+        // Створення DOM-вузла безпечним способом
+        response.items.forEach(summary => {
+            const item = document.createElement("li");
+            item.textContent = `${summary.severity}: ${summary.count}`;
+            summaryList.append(item);
+        });
+
+    } catch (error) {
+        // Коротке фіксоване повідомлення без stack trace
+        summaryStatus.textContent = 'Сталася помилка під час отримання підсумку.';
+    }
+}
+
+// Викликається обробником події кнопки
+if (summaryBtn) {
+    summaryBtn.addEventListener('click', loadSeveritySummary);
+}
