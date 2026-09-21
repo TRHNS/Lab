@@ -23,7 +23,7 @@ public static class IncidentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
       
-        // замість дефолтної заглушки 501 Not Implemented підключено метод обробки severity-summary
+        // ЗМІНЕНО: замість дефолтної заглушки 501 Not Implemented підключено метод обробки severity-summary
        
         group.MapGet("/severity-summary", GetSeveritySummaryAsync)
             .WithName("GetIncidentSeveritySummary")
