@@ -29,12 +29,11 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
                 incident.OccurredAtUtc,
                 incident.CreatedAtUtc))
             .ToListAsync(cancellationToken);
-
-        
     }
+
     public async Task<IncidentSeveritySummaryResponse> GetSeveritySummaryAsync(
-        IReadOnlyList<IncidentStatus>? statuses,
-        CancellationToken cancellationToken)
+    IReadOnlyList<IncidentStatus>? statuses,
+    CancellationToken cancellationToken)
     {
         logger.LogInformation("Loading severity summary for statuses: {Statuses}", statuses);
 
@@ -45,16 +44,29 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
             query = query.Where(incident => statuses.Contains(incident.Status));
         }
 
+        
         var items = await query
             .GroupBy(incident => incident.Severity)
             .Select(group => new IncidentSeveritySummaryItem(
                 group.Key.ToString(),
                 group.Count()))
             .ToListAsync(cancellationToken);
-        // Структурований лог результату
-        logger.LogInformation("Сформовано підсумок за критичністю: знайдено {GroupCount} груп(и)", items.Count);
-        
-        return new IncidentSeveritySummaryResponse(items);
+
+       
+        var sortedItems = items
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Severity, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var item in sortedItems)
+        {
+            logger.LogInformation(
+                "Критичність {Severity}: {Count} інцидент(ів)",
+                item.Severity,
+                item.Count);
+        }
+
+        return new IncidentSeveritySummaryResponse(sortedItems);
     }
 
     public Task<IncidentDetailsResponse?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
@@ -85,4 +97,3 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
             .SingleOrDefaultAsync(cancellationToken);
     }
 }
-

@@ -22,9 +22,9 @@ public static class IncidentEndpoints
             .Produces<IncidentDetailsResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-      
+
         // ЗМІНЕНО: замість дефолтної заглушки 501 Not Implemented підключено метод обробки severity-summary
-       
+
         group.MapGet("/severity-summary", GetSeveritySummaryAsync)
             .WithName("GetIncidentSeveritySummary")
             .Produces<IncidentSeveritySummaryResponse>();
@@ -69,34 +69,33 @@ public static class IncidentEndpoints
             : Results.Ok(incident);
     }
 
-  
+
     // ДОДАНО: метод-обробник для ендпоінта severity-summary, який приймає параметри, валідує їх та звертається до application-шару
-    
+
     private static async Task<IResult> GetSeveritySummaryAsync(
-        [FromQuery] string[]? status,
-        IncidentQueries queries,
-        CancellationToken cancellationToken)
+    string? status,
+    IncidentQueries queries,
+    CancellationToken cancellationToken)
     {
-        IncidentStatus[]? parsedStatuses = null;
-        if (status is not null && status.Length > 0)
+        var parsedStatuses = new List<IncidentStatus>();
+
+        if (!string.IsNullOrWhiteSpace(status))
         {
-            var list = new List<IncidentStatus>();
-            foreach (var s in status)
+            foreach (var part in status.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                // Перевірка та безпечне перетворення статусів з урахуванням регістру
-                if (!Enum.TryParse<IncidentStatus>(s, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+                if (!Enum.TryParse<IncidentStatus>(part, ignoreCase: true, out var parsed)
+                    || !Enum.IsDefined(parsed))
                 {
                     return Results.ValidationProblem(new Dictionary<string, string[]>
                     {
                         ["status"] = ["Допустимі значення: New, Triaged, InProgress, Resolved, Closed."]
                     });
                 }
-                list.Add(parsed);
+
+                parsedStatuses.Add(parsed);
             }
-            parsedStatuses = list.ToArray();
         }
 
-        var result = await queries.GetSeveritySummaryAsync(parsedStatuses, cancellationToken);
-        return Results.Ok(result);
+        return Results.Ok(await queries.GetSeveritySummaryAsync(parsedStatuses, cancellationToken));
     }
 }
