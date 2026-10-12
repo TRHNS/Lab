@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SecureLab.Api.Data;
 using SecureLab.Api.Data.Entities;
+using System.Security.Claims;
 
 namespace SecureLab.Api.Scaffolding;
 
@@ -56,8 +57,14 @@ public static class Lab02Endpoints
 
             return Results.Ok(items);
         });
-        app.MapPost("/api/incidents", async (CreateIncidentRequest request, SecureLabDbContext db, CancellationToken ct) =>
+        app.MapPost("/api/incidents", async (CreateIncidentRequest request, HttpContext httpContext, SecureLabDbContext db, CancellationToken ct) =>
         {
+            // Owner береться лише з перевіреного principal, а не з body чи header
+            var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var ownerUserId))
+                return Results.Problem(statusCode: StatusCodes.Status500InternalServerError);
+
+           
             var now = DateTimeOffset.UtcNow;
             var errors = new Dictionary<string, string[]>();
 
@@ -115,7 +122,7 @@ public static class Lab02Endpoints
                 Severity = severity,
                 OccurredAtUtc = request.OccurredAtUtc!.Value.ToUniversalTime(),
                 Status = IncidentStatus.New,
-                OwnerUserId = DbSeeder.AliceId,
+                OwnerUserId = ownerUserId,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
@@ -129,7 +136,7 @@ public static class Lab02Endpoints
                 incident.OccurredAtUtc, incident.CreatedAtUtc, incident.UpdatedAtUtc);
 
             return Results.Created($"/api/incidents/{incident.Id}", response);
-        });
+        }).RequireAuthorization();
     }
 
 
