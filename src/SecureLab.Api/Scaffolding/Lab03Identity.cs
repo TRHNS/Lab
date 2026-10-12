@@ -80,16 +80,36 @@ public static class Lab03Identity
             return Results.Created("/api/me", new RegistrationResponse(user.Id, user.UserName, user.DisplayName));
         });
 
-        app.MapPost("/api/auth/login", async (LoginInput input, SignInManager<ApplicationUser> signIn) =>
-        {
+        app.MapPost("/api/auth/login", async (LoginInput input, SignInManager<ApplicationUser> signIn,
+             HttpContext httpContext, ILogger<Program> logger) =>
+            {
             if (string.IsNullOrWhiteSpace(input.UserName) || string.IsNullOrEmpty(input.Password))
+            {
+                logger.LogInformation("Auth event {EventType}: result {Result}, trace {TraceId}",
+                    "login", "failure", httpContext.TraceIdentifier);
                 return Results.Unauthorized();
+            }
+
             var result = await signIn.PasswordSignInAsync(input.UserName, input.Password, false, false);
+
+            // Подія: лише тип, результат і traceId — без логіна, пароля, cookie
+            logger.LogInformation("Auth event {EventType}: result {Result}, trace {TraceId}",
+                "login", result.Succeeded ? "success" : "failure", httpContext.TraceIdentifier);
+
             return result.Succeeded ? Results.NoContent() : Results.Unauthorized();
-        });
-        app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signIn) =>
+            }).RequireRateLimiting("login");
+
+        app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signIn,
+            HttpContext httpContext, ILogger<Program> logger) =>
         {
+            // id беремо з principal ДО sign-out;
+            var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous";
+
             await signIn.SignOutAsync();
+
+            logger.LogInformation("Auth event {EventType}: result {Result}, user {UserId}, trace {TraceId}",
+                "logout", "success", userId, httpContext.TraceIdentifier);
+
             return Results.NoContent();
         });
 

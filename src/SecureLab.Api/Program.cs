@@ -4,6 +4,7 @@ using Scalar.AspNetCore;
 using SecureLab.Api.Application.Incidents;
 using SecureLab.Api.Data;
 using SecureLab.Api.Presentation.Endpoints;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -22,6 +23,31 @@ builder.Services.AddDbContext<SecureLabDbContext>(options =>
 builder.Services.AddScoped<IncidentQueries>();
 
 builder.AddLab03Identity();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Подія: спробу входу відхилено лімітом (без логіна, пароля, cookie)
+    options.OnRejected = (context, _) =>
+    {
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning("Auth event {EventType}: result {Result}, trace {TraceId}",
+            "login", "rate_limited", context.HttpContext.TraceIdentifier);
+        return ValueTask.CompletedTask;
+    };
+
+    // Ключ - IP клієнта; у тестовому сервері IP немає, тому "unknown"
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromSeconds(30),
+                QueueLimit = 0
+            }));
+});
 
 var app = builder.Build();
 
@@ -51,6 +77,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
