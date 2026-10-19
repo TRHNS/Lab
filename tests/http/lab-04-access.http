@@ -55,3 +55,43 @@ Accept: application/json
 ### List as current user
  GET {{host}}/api/incidents
  Accept: application/json
+ 
+### own update with forged fields (as Alice) 
+PUT {{host}}/api/incidents/{{aliceId}}
+Content-Type: application/json
+
+{ "title": "Alice оновила свій інцидент", "description": "Одержано лист нібито від деканату. Вкладення не відкривалося.", "occurredAtUtc": "2026-08-01T08:30:00+00:00", "ownerUserId": "10000000-0000-0000-0000-000000000002", 
+"status": "Closed", "severity": "Critical" }
+
+### Analyst update attempt (as Morgan)
+PUT {{host}}/api/incidents/{{aliceId}}
+Content-Type: application/json
+
+{ "title": "Morgan змінює", "description": "Спроба аналітика змінити вміст інциденту.", "occurredAtUtc": "2026-08-01T08:30:00+00:00" }
+
+### delete: Alice видаляє New-інцидент Bob 
+DELETE {{host}}/api/incidents/20000000-0000-0000-0000-000000000004
+
+### Bob's incident …0004 still exists (as Bob) 
+GET {{host}}/api/incidents/20000000-0000-0000-0000-000000000004
+Accept: application/json
+
+### Delete own Triaged incident 
+DELETE {{host}}/api/incidents/{{aliceId}}
+
+### Delete own New incident
+DELETE {{host}}/api/incidents/20000000-0000-0000-0000-000000000005
+
+### Analyst delete attempt 
+DELETE {{host}}/api/incidents/20000000-0000-0000-0000-000000000003
+### Own comment (Alice -> comment-1 до власного інциденту)
+GET {{host}}/api/incident-comments/30000000-0000-0000-0000-000000000001
+Accept: application/json
+
+### A-12: comment to Bob's incident (Alice -> comment-2)
+GET {{host}}/api/incident-comments/30000000-0000-0000-0000-000000000002
+Accept: application/json
+
+### A-12: internal comment (Alice -> comment-3)
+GET {{host}}/api/incident-comments/30000000-0000-0000-0000-000000000003
+Accept: application/json

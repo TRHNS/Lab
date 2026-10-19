@@ -15,7 +15,7 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
     {
         logger.LogInformation("Loading incidents with status filter {Status}", status);
 
-        // ЛР4: Analyst бачить усі, інші — лише власні (умова в самому SQL-запиті)
+        // Analyst бачить усі, інші лише власні 
         var query = dbContext.Incidents
             .AsNoTracking()
             .Where(incident => isAnalyst || incident.OwnerUserId == userId);
@@ -107,6 +107,28 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
                         comment.Text,
                         comment.CreatedAtUtc))
                     .ToList()))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+    // child resource — доступ лише через право на parent incident
+    public Task<IncidentCommentResponse?> GetCommentAsync(
+        Guid id,
+        Guid userId,
+        bool isAnalyst,
+        CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Loading comment {CommentId}", id);
+
+        return dbContext.IncidentComments
+            .AsNoTracking()
+            // Analyst — будь-який коментар; інші — лише не internal і лише до власного інциденту
+            .Where(comment => comment.Id == id
+                && (isAnalyst
+                    || (comment.Incident.OwnerUserId == userId && !comment.IsInternal)))
+            .Select(comment => new IncidentCommentResponse(
+                comment.Id,
+                comment.Author.DisplayName,
+                comment.Text,
+                comment.CreatedAtUtc))
             .SingleOrDefaultAsync(cancellationToken);
     }
 }

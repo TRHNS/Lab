@@ -115,6 +115,16 @@ public static class DbSeeder
                 Text = "Розпочато перевірку журналу автентифікації.",
                 IsInternal = false,
                 CreatedAtUtc = new DateTimeOffset(2026, 8, 2, 14, 40, 0, TimeSpan.Zero)
+            },
+            // ЛР4: internal comment аналітика до інциденту Alice (синтетичний)
+            new IncidentComment
+            {
+                Id = Guid.Parse("30000000-0000-0000-0000-000000000003"),
+                Incident = aliceIncident,
+                Author = morgan,
+                Text = "Внутрішня нотатка аналітика: перевірити домен відправника.",
+                IsInternal = true,
+                CreatedAtUtc = new DateTimeOffset(2026, 8, 1, 10, 0, 0, TimeSpan.Zero)
             });
         dbContext.IncidentStatusHistory.Add(
             new IncidentStatusHistory

@@ -32,6 +32,17 @@ public static class IncidentEndpoints
             .WithName("GetIncidentSeveritySummary")
             .Produces<IncidentSeveritySummaryResponse>();
 
+
+        // дочірній ресурс — коментарі
+        var comments = endpoints.MapGroup("/api/incident-comments")
+            .WithTags("IncidentComments")
+            .RequireAuthorization();
+
+        comments.MapGet("/{id:guid}", GetCommentAsync)
+            .WithName("GetIncidentComment")
+            .Produces<IncidentCommentResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return endpoints;
     }
 
@@ -85,6 +96,24 @@ public static class IncidentEndpoints
         title: "Інцидент не знайдено",
         statusCode: StatusCodes.Status404NotFound);
 
+    private static async Task<IResult> GetCommentAsync(
+       Guid id,
+       HttpContext httpContext,
+       IncidentQueries queries,
+       CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return Results.Challenge();
+        var isAnalyst = httpContext.User.IsInRole(DbSeeder.AnalystRole);
+
+        var comment = await queries.GetCommentAsync(id, userId, isAnalyst, cancellationToken);
+        // чужий, internal і неіснуючий коментар — однакова 404
+        return comment is null ? CommentNotFound() : Results.Ok(comment);
+    }
+
+    internal static IResult CommentNotFound() => Results.Problem(
+        title: "Коментар не знайдено",
+        statusCode: StatusCodes.Status404NotFound);
 
     // ДОДАНО: метод-обробник для ендпоінта severity-summary, який приймає параметри, валідує їх та звертається до application-шару
 
