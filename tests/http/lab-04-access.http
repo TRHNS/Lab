@@ -1,0 +1,47 @@
+@host = http://localhost:5080
+@aliceId = 20000000-0000-0000-0000-000000000001
+@bobId = 20000000-0000-0000-0000-000000000002
+
+### Alice login; REST Client reads process environment
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "userName": "alice", "password": "{{$processEnv SeedUsers__Password}}" }
+
+### Own details (Alice -> Alice)
+GET {{host}}/api/incidents/{{aliceId}}
+Accept: application/json
+
+### Foreign details with the same Alice cookie
+GET {{host}}/api/incidents/{{bobId}}
+Accept: application/json
+
+### Foreign update with the same Alice cookie
+PUT {{host}}/api/incidents/{{bobId}}
+Content-Type: application/json
+
+{ "title": "Змінено Alice (PoC)", "description": "Система зафіксувала вхід до облікового запису з нового пристрою.", "occurredAtUtc": "2026-08-02T14:10:00+00:00" }
+
+### Read Bob after update: чи змінився title
+GET {{host}}/api/incidents/{{bobId}}
+Accept: application/json
+
+### Morgan (Analyst) login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "userName": "morgan", "password": "{{$processEnv SeedUsers__Password}}" }
+
+### Analyst reads Alice incident
+GET {{host}}/api/incidents/{{aliceId}}
+Accept: application/json
+
+### Bob login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "userName": "bob", "password": "{{$processEnv SeedUsers__Password}}" }
+
+### Bob reads own incident
+GET {{host}}/api/incidents/{{bobId}}
+Accept: application/json

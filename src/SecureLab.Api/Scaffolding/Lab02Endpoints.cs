@@ -137,11 +137,28 @@ public static class Lab02Endpoints
 
             return Results.Created($"/api/incidents/{incident.Id}", response);
         }).RequireAuthorization();
+
+        app.MapPut("/api/incidents/{id:guid}", async (Guid id, UpdateIncidentRequest request,
+           SecureLabDbContext db, CancellationToken ct) =>
+        {
+            var incident = await db.Incidents.SingleOrDefaultAsync(i => i.Id == id, ct);
+            if (incident is null)
+                return Results.NotFound();
+
+            incident.Title = request.Title;
+            incident.Description = request.Description;
+            incident.OccurredAtUtc = request.OccurredAtUtc;
+            incident.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        }).RequireAuthorization();
+
     }
 
 
     public sealed record CreateIncidentRequest(
         string? Title, string? Description, string? Severity, DateTimeOffset? OccurredAtUtc);
+    public sealed record UpdateIncidentRequest(string Title, string Description, DateTimeOffset OccurredAtUtc);
     public sealed record CreatedIncidentResponse(
         Guid Id, string Title, string Description, string Severity, string Status, DateTimeOffset OccurredAtUtc, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc);
     // Eкранування спецсимволів
