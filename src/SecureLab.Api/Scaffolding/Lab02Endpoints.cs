@@ -212,9 +212,25 @@ public static class Lab02Endpoints
             return Results.NoContent();
 
             }).RequireAuthorization();
+
+        app.MapPost("/api/incidents/{id:guid}/triage", async (Guid id, TriageRequest request,
+            SecureLabDbContext db, CancellationToken ct) =>
+        {
+            var incident = await db.Incidents.SingleOrDefaultAsync(i => i.Id == id, ct);
+            if (incident is null)
+                return IncidentEndpoints.IncidentNotFound();
+
+            // дефект: клієнт сам задає наступний статус
+            incident.Status = Enum.TryParse<IncidentStatus>(request.Status, true, out var s)
+                ? s : IncidentStatus.Triaged;
+            incident.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { incident.Id, Status = incident.Status.ToString() });
+        }).RequireAuthorization();
+
     }
 
-
+    public sealed record TriageRequest(string? Status);
     public sealed record CreateIncidentRequest(
         string? Title, string? Description, string? Severity, DateTimeOffset? OccurredAtUtc);
     public sealed record UpdateIncidentRequest(string Title, string Description, DateTimeOffset OccurredAtUtc);

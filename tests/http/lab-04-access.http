@@ -26,7 +26,7 @@ Content-Type: application/json
 GET {{host}}/api/incidents/{{bobId}}
 Accept: application/json
 
-### Morgan (Analyst) login
+### Morgan login
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
@@ -88,10 +88,26 @@ DELETE {{host}}/api/incidents/20000000-0000-0000-0000-000000000003
 GET {{host}}/api/incident-comments/30000000-0000-0000-0000-000000000001
 Accept: application/json
 
-### A-12: comment to Bob's incident (Alice -> comment-2)
+### comment to Bob's incident (Alice -> comment-2)
 GET {{host}}/api/incident-comments/30000000-0000-0000-0000-000000000002
 Accept: application/json
 
-### A-12: internal comment (Alice -> comment-3)
+### internal comment (Alice -> comment-3)
 GET {{host}}/api/incident-comments/30000000-0000-0000-0000-000000000003
 Accept: application/json
+
+### Reporter own operation: Alice reads own New incident
+GET {{host}}/api/incidents/20000000-0000-0000-0000-000000000003
+Accept: application/json
+
+### Vertical PoC: Reporter Alice triage own incident 
+POST {{host}}/api/incidents/20000000-0000-0000-0000-000000000003/triage
+Content-Type: application/json
+
+{ "status": "Closed", "role": "Analyst", "ownerUserId": "10000000-0000-0000-0000-000000000003", "isTransitionAllowed": true }
+
+### Vertical PoC: Reporter Alice triage Bob incident (…0004)
+POST {{host}}/api/incidents/20000000-0000-0000-0000-000000000004/triage
+Content-Type: application/json
+
+{ "status": "Triaged" }
