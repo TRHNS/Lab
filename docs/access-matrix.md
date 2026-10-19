@@ -8,7 +8,7 @@
 | Створення інциденту | успадкований baseline | deny, 401 | allow for self | allow for self | allow for self | Сервер призначає власника | Перевірити baseline |
 | Update content | добрий | deny, 401 | owner — allow (title, description, occurredAtUtc); non-owner — deny, 404 | deny, 403 | owner — allow; non-owner — deny, 404 | Так | Реалізувати; A-04, A-08a |
 | Delete | добрий | deny, 401 | owner — allow, якщо статус New, інакше deny, 409; non-owner — deny, 404 | deny, 403 | owner — як Reporter; non-owner — deny, 404 | Так | Реалізувати; A-04 |
-| Зміна severity/status | добрий | deny, 401 | deny, 403 | allow лише New → Triaged; інший статус — deny, 409 | deny, 403 | Ні | Реалізувати; A-06, A-07, A-09 |
+| Зміна severity/status (`POST /api/incidents/{id}/triage`) | добрий | deny, 401 | deny, 403 | allow лише New → Triaged; інший статус — deny, 409 | deny, 403 | Ні | Реалізувати; A-06, A-07, A-09 |
 | Перегляд internal comment (details-проєкція і `GET /api/incident-comments/{id}`) | добрий | deny, 401 | deny, 404; у details не показується навіть власнику | allow після авторизації для parent incident | deny, 404 | Ні для internal rule; доступ до parent incident перевіряється окремо | Реалізувати; A-12 |
 | Export/audit | відмінний, якщо flow існує | не застосовується | не застосовується | не застосовується | не застосовується | не застосовується | не застосовується |
 
