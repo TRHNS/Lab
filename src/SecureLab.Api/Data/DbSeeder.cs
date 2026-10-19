@@ -116,7 +116,7 @@ public static class DbSeeder
                 IsInternal = false,
                 CreatedAtUtc = new DateTimeOffset(2026, 8, 2, 14, 40, 0, TimeSpan.Zero)
             },
-            // ЛР4: internal comment аналітика до інциденту Alice (синтетичний)
+            // internal comment аналітика до інциденту Alice
             new IncidentComment
             {
                 Id = Guid.Parse("30000000-0000-0000-0000-000000000003"),

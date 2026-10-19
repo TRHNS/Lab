@@ -111,3 +111,9 @@ POST {{host}}/api/incidents/20000000-0000-0000-0000-000000000004/triage
 Content-Type: application/json
 
 { "status": "Triaged" }
+
+### Analyst triage New incident, Triaged
+POST {{host}}/api/incidents/20000000-0000-0000-0000-000000000003/triage
+
+### Analyst triage again
+POST {{host}}/api/incidents/20000000-0000-0000-0000-000000000003/triage

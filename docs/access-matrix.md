@@ -1,16 +1,17 @@
 # Матриця доступу ЛР04
 | Дія | Рівень | Анонім | Reporter | Analyst | Administrator | Власник ресурсу має значення? | Стан реалізації |
 |---|---|---:|---:|---:|---:|---:|---|
-| Перегляд списку | добрий | deny, 401 | own | all | own | Так для `Reporter` і `Administrator` | Реалізувати; A-05 |
+| Перегляд списку | добрий | deny, 401 | own | all | own | Так для `Reporter` і `Administrator` | Реалізовано: `IncidentQueries.GetListAsync`; тест `A05_AliceSeesOnlyOwnIncidents` |
 | Пошук `GET /api/incidents/search` | відмінний (A-11) | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» |
 | Зведення `GET /api/incidents/severity-summary` | відмінний (A-11) | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» | не виконувалось — рівень «Відмінно» |
-| Перегляд деталей | достатній: entry-контракт ЛР 5; головна action | deny, 401 | owner — allow; non-owner — deny, 404 | allow для аналізу інциденту | owner — allow; non-owner — deny, 404 | Так | Реалізувати; A-01, A-02, A-03, A-03R, A-10 |
-| Створення інциденту | успадкований baseline | deny, 401 | allow for self | allow for self | allow for self | Сервер призначає власника | Перевірити baseline |
-| Update content | добрий | deny, 401 | owner — allow (title, description, occurredAtUtc); non-owner — deny, 404 | deny, 403 | owner — allow; non-owner — deny, 404 | Так | Реалізувати; A-04, A-08a |
-| Delete | добрий | deny, 401 | owner — allow, якщо статус New, інакше deny, 409; non-owner — deny, 404 | deny, 403 | owner — як Reporter; non-owner — deny, 404 | Так | Реалізувати; A-04 |
-| Зміна severity/status (`POST /api/incidents/{id}/triage`) | добрий | deny, 401 | deny, 403 | allow лише New → Triaged; інший статус — deny, 409 | deny, 403 | Ні | Реалізувати; A-06, A-07, A-09 |
-| Перегляд internal comment (details-проєкція і `GET /api/incident-comments/{id}`) | добрий | deny, 401 | deny, 404; у details не показується навіть власнику | allow після авторизації для parent incident | deny, 404 | Ні для internal rule; доступ до parent incident перевіряється окремо | Реалізувати; A-12 |
+| Перегляд деталей | достатній: entry-контракт ЛР 5; головна action | deny, 401 | owner — allow; non-owner — deny, 404 | allow для аналізу інциденту | owner — allow; non-owner — deny, 404 | Так | Реалізовано: `IncidentQueries.GetDetailsAsync`, `IncidentEndpoints.GetDetailsAsync`; тести `A02`, `A03_A10`, `A03R`; A-01 — .http |
+| Створення інциденту | успадкований baseline | deny, 401 | allow for self | allow for self | allow for self | Сервер призначає власника | Перевірено baseline: тести ЛР 3 |
+| Update content | добрий | deny, 401 | owner — allow (title, description, occurredAtUtc); non-owner — deny, 404 | deny, 403 | owner — allow; non-owner — deny, 404 | Так | Реалізовано: `PUT /api/incidents/{id}` у `Lab02Endpoints`; тест `A04_AliceCannotUpdateBobIncident`; A-08a — .http |
+| Delete | добрий | deny, 401 | owner — allow, якщо статус New, інакше deny, 409; non-owner — deny, 404 | deny, 403 | owner — як Reporter; non-owner — deny, 404 | Так | Реалізовано: `DELETE /api/incidents/{id}` у `Lab02Endpoints`; A-04 — .http |
+| Зміна severity/status (`POST /api/incidents/{id}/triage`) | добрий | deny, 401 | deny, 403 | allow лише New → Triaged; інший статус — deny, 409 | deny, 403 | Ні | Реалізовано: triage у `Lab02Endpoints`; тести `A06_ReporterCannotTriage`, `A07_AnalystCanTriageNewIncident`; A-09 — audit у журналі |
+| Перегляд internal comment (details-проєкція і `GET /api/incident-comments/{id}`) | добрий | deny, 401 | deny, 404; у details не показується навіть власнику | allow після авторизації для parent incident | deny, 404 | Ні для internal rule; доступ до parent incident перевіряється окремо | Реалізовано: `IncidentQueries.GetCommentAsync`, `IncidentQueries.GetDetailsAsync`; тест `A12_AliceCannotReadBobOrInternalComment` |
 | Export/audit | відмінний, якщо flow існує | не застосовується | не застосовується | не застосовується | не застосовується | не застосовується | не застосовується |
 
 Child resource: `IncidentComment` (`GET /api/incident-comments/{id}`) — доступ лише за правом читання parent incident; для non-owner — 404.
 Політика відмов: authenticated non-owner для чужого інциденту отримує 404, ідентичний неіснуючому, — однаково для details, update, delete і child `GET /api/incident-comments/{id}`; так факт існування чужого ресурсу не розкривається. 403 — ресурс видимий, але дія заборонена або немає ролі; 409 — недопустимий поточний статус; анонім — 401 без redirect.
+Final hash - e2e17275539f230ef3e65c0526a1442c670d2b05

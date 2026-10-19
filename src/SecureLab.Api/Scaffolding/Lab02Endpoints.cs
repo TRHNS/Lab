@@ -3,6 +3,7 @@ using SecureLab.Api.Data;
 using SecureLab.Api.Data.Entities;
 using System.Security.Claims;
 using SecureLab.Api.Presentation.Endpoints;
+using System.Diagnostics;
 
 namespace SecureLab.Api.Scaffolding;
 
@@ -213,16 +214,39 @@ public static class Lab02Endpoints
 
             }).RequireAuthorization();
 
-        app.MapPost("/api/incidents/{id:guid}/triage", async (Guid id, TriageRequest request,
-            SecureLabDbContext db, CancellationToken ct) =>
+        //fixed: triage лише для Analyst і лише New -> Triaged
+        app.MapPost("/api/incidents/{id:guid}/triage", async (Guid id, HttpContext httpContext,
+            SecureLabDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
+            if (!Guid.TryParse(httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Results.Challenge();
+
+            // tracked entity, без AsNoTracking
             var incident = await db.Incidents.SingleOrDefaultAsync(i => i.Id == id, ct);
             if (incident is null)
                 return IncidentEndpoints.IncidentNotFound();
 
-            // дефект: клієнт сам задає наступний статус
-            incident.Status = Enum.TryParse<IncidentStatus>(request.Status, true, out var s)
-                ? s : IncidentStatus.Triaged;
+            // потрібна роль Analyst з server-issued claim
+            if (!httpContext.User.IsInRole(DbSeeder.AnalystRole))
+            {
+                // audit відмови без cookie, пароля, токенів і тіла запиту
+                var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+                logger.LogWarning(
+                    "Audit {EventType}: user {UserId}, action {Action}, incident {IncidentId}, result {Result}, at {OccurredAtUtc}, trace {TraceId}",
+                    "authorization.denied", userId, "incident.triage", incident.Id, "denied",
+                    DateTimeOffset.UtcNow, traceId);
+                return Results.Forbid();
+            }
+
+            // context: перехід можливий лише з поточного статусу New
+            if (incident.Status != IncidentStatus.New)
+                return Results.Problem(
+                    title: "Конфлікт",
+                    detail: "Triage можливий лише для інциденту у статусі New.",
+                    statusCode: StatusCodes.Status409Conflict);
+
+            // наступний статус визначає сервер, а не клієнт
+            incident.Status = IncidentStatus.Triaged;
             incident.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { incident.Id, Status = incident.Status.ToString() });
@@ -230,7 +254,6 @@ public static class Lab02Endpoints
 
     }
 
-    public sealed record TriageRequest(string? Status);
     public sealed record CreateIncidentRequest(
         string? Title, string? Description, string? Severity, DateTimeOffset? OccurredAtUtc);
     public sealed record UpdateIncidentRequest(string Title, string Description, DateTimeOffset OccurredAtUtc);
