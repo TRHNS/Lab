@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SecureLab.Api.Data;
 using SecureLab.Api.Data.Entities;
 using System.Security.Claims;
+using SecureLab.Api.Presentation.Endpoints;
 
 namespace SecureLab.Api.Scaffolding;
 
@@ -64,7 +65,7 @@ public static class Lab02Endpoints
             if (!Guid.TryParse(userIdClaim, out var ownerUserId))
                 return Results.Problem(statusCode: StatusCodes.Status500InternalServerError);
 
-           
+
             var now = DateTimeOffset.UtcNow;
             var errors = new Dictionary<string, string[]>();
 
@@ -139,20 +140,78 @@ public static class Lab02Endpoints
         }).RequireAuthorization();
 
         app.MapPut("/api/incidents/{id:guid}", async (Guid id, UpdateIncidentRequest request,
-           SecureLabDbContext db, CancellationToken ct) =>
+             HttpContext httpContext, SecureLabDbContext db, CancellationToken ct) =>
         {
+            // user id і роль — лише з verified principal
+            if (!Guid.TryParse(httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Results.Challenge();
+
+            // завантаження без AsNoTracking, щоб EF зберіг зміну
             var incident = await db.Incidents.SingleOrDefaultAsync(i => i.Id == id, ct);
             if (incident is null)
-                return Results.NotFound();
+                return IncidentEndpoints.IncidentNotFound();
 
-            incident.Title = request.Title;
-            incident.Description = request.Description;
-            incident.OccurredAtUtc = request.OccurredAtUtc;
+            // Analyst бачить інцидент, але права на зміну content не має
+            if (httpContext.User.IsInRole(DbSeeder.AnalystRole))
+                return Results.Forbid();
+
+            // чужий інцидент — та сама відповідь, що й для неіснуючого
+            if (incident.OwnerUserId != userId)
+                return IncidentEndpoints.IncidentNotFound();
+
+            // базова валідація дозволених полів
+            var errors = new Dictionary<string, string[]>();
+            if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 160)
+                errors["title"] = ["Заголовок обов'язковий, до 160 символів."];
+            if (string.IsNullOrWhiteSpace(request.Description) || request.Description.Length > 4000)
+                errors["description"] = ["Опис обов'язковий, до 4000 символів."];
+            if (request.OccurredAtUtc > DateTimeOffset.UtcNow.AddMinutes(5))
+                errors["occurredAtUtc"] = ["Час виникнення не може бути в майбутньому."];
+            if (errors.Count > 0)
+                return Results.ValidationProblem(errors);
+
+            // змінюються лише content fields; owner, status, severity — ні
+            incident.Title = request.Title.Trim();
+            incident.Description = request.Description.Trim();
+            incident.OccurredAtUtc = request.OccurredAtUtc.ToUniversalTime();
             incident.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
-        }).RequireAuthorization();
 
+        }).RequireAuthorization();
+    
+
+            //delete — рішення авторизації до видалення
+            app.MapDelete("/api/incidents/{id:guid}", async (Guid id,
+            HttpContext httpContext, SecureLabDbContext db, CancellationToken ct) =>
+            {
+            if (!Guid.TryParse(httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Results.Challenge();
+
+            var incident = await db.Incidents.SingleOrDefaultAsync(i => i.Id == id, ct);
+            if (incident is null)
+                return IncidentEndpoints.IncidentNotFound();
+
+            // Analyst бачить інцидент, але права на видалення не має
+            if (httpContext.User.IsInRole(DbSeeder.AnalystRole))
+                return Results.Forbid();
+
+            // чужий інцидент — та сама відповідь, що й для неіснуючого
+            if (incident.OwnerUserId != userId)
+                return IncidentEndpoints.IncidentNotFound();
+
+            // власник може видалити лише інцидент у статусі New
+            if (incident.Status != IncidentStatus.New)
+                return Results.Problem(
+                    title: "Конфлікт",
+                    detail: "Видалити можна лише інцидент у статусі New.",
+                    statusCode: StatusCodes.Status409Conflict);
+
+            db.Incidents.Remove(incident);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+
+            }).RequireAuthorization();
     }
 
 
