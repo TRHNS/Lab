@@ -45,3 +45,13 @@ Content-Type: application/json
 ### Bob reads own incident
 GET {{host}}/api/incidents/{{bobId}}
 Accept: application/json
+### Anonymous details (no cookie)
+# @no-cookie-jar
+GET {{host}}/api/incidents/{{bobId}}
+Accept: application/json
+### Unknown id with Alice cookie: та сама 404
+GET {{host}}/api/incidents/99999999-9999-9999-9999-999999999999
+Accept: application/json
+### List as current user
+ GET {{host}}/api/incidents
+ Accept: application/json

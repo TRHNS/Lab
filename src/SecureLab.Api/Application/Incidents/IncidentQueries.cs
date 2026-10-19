@@ -9,11 +9,17 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
 {
     public async Task<IReadOnlyList<IncidentListItemResponse>> GetListAsync(
         IncidentStatus? status,
+        Guid userId,
+        bool isAnalyst,
         CancellationToken cancellationToken)
     {
         logger.LogInformation("Loading incidents with status filter {Status}", status);
 
-        var query = dbContext.Incidents.AsNoTracking();
+        // ЛР4: Analyst бачить усі, інші — лише власні (умова в самому SQL-запиті)
+        var query = dbContext.Incidents
+            .AsNoTracking()
+            .Where(incident => isAnalyst || incident.OwnerUserId == userId);
+
         if (status is not null)
         {
             query = query.Where(incident => incident.Status == status);
@@ -69,13 +75,19 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
         return new IncidentSeveritySummaryResponse(sortedItems);
     }
 
-    public Task<IncidentDetailsResponse?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
+    public Task<IncidentDetailsResponse?> GetDetailsAsync(
+        Guid id,
+        Guid userId,
+        bool isAnalyst,
+        CancellationToken cancellationToken)
     {
         logger.LogInformation("Loading incident {IncidentId}", id);
 
         return dbContext.Incidents
             .AsNoTracking()
-            .Where(incident => incident.Id == id)
+            // id має збігтися завжди; доступ — Analyst або власник
+            .Where(incident => incident.Id == id
+                && (isAnalyst || incident.OwnerUserId == userId))
             .Select(incident => new IncidentDetailsResponse(
                 incident.Id,
                 incident.Title,
@@ -86,7 +98,8 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
                 incident.CreatedAtUtc,
                 incident.Owner.DisplayName,
                 incident.Comments
-                    .Where(comment => !comment.IsInternal)
+                    // internal comment бачить лише Analyst (правило матриці)
+                    .Where(comment => isAnalyst || !comment.IsInternal)
                     .OrderBy(comment => comment.CreatedAtUtc)
                     .Select(comment => new IncidentCommentResponse(
                         comment.Id,
