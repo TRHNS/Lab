@@ -75,10 +75,31 @@ if (resetRequested)
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
+// Lab 5: CSP складено з фактичних ресурсів flow: лише власні JS, CSS і fetch на той самий origin
+const string csp =
+    "default-src 'self'; " +
+    "script-src 'self'; " +
+    "style-src 'self'; " +
+    "connect-src 'self'; " +
+    "img-src 'self'; " +
+    "frame-ancestors 'none'";
+
 app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+
+    // Development-довідник /scalar використовує сторонній UI-package з власними ресурсами,
+    // тому CSP основного клієнта до нього не застосовується
+    var isDevelopmentApiReference =
+        app.Environment.IsDevelopment()
+        && context.Request.Path.StartsWithSegments("/scalar");
+
+    if (!isDevelopmentApiReference)
+    {
+        context.Response.Headers["Content-Security-Policy"] = csp;
+    }
+
     await next(context);
 });
 

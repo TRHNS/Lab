@@ -138,3 +138,25 @@ select {
     grid-template-columns: 1fr;
   }
 }
+/* Lab 5: стилі перенесено з inline style="…", щоб CSP не потребувала 'unsafe-inline' */
+#severity-summary-container {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+}
+#severity-summary-container h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+#summary-status {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+#severity-summary-list {
+  margin: 0;
+  padding-left: 24px;
+  font-size: 0.9rem;
+}
