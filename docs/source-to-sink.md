@@ -24,3 +24,19 @@
 | `browser-lab.js`, обробник submit, р. 28 — `#incident-id.value` | `created.id` | server-generated | значення поля форми | безпечно |
 | `browser-lab.js`, р. 2 і 5 — `fetch` на `/api/incidents/` з `id` | значення `#incident-id` | контрольоване користувачем | URL path | безпечно: `encodeURIComponent`, запит same-origin |
 | `browser-lab.js`, р. 13 — `createElement` з literal `"p"` | literal `"p"` | trusted constant | ім'я тегу | безпечно |
+## Другий потік: IncidentComment.Text (рівень «Добре»)
+
+Поле: IncidentComment.Text. Запис: коментар 30000000-0000-0000-0000-000000000005 від Morgan до інциденту Alice 20000000-0000-0000-0000-000000000001.
+
+| Крок | Файл та функція/DTO | Конкретне поле/значення | Доказ і довіра |
+|---|---|---|---|
+| Source | `Data/DbSeeder.cs`, `SeedAsync`, константа `Lab05Marker`, коментар …0005 | текст коментаря; у продукті його вводив би автор коментаря | рис. 24; контрольоване користувачем |
+| Request | немає: endpoint створення коментарів в API відсутній | — | значення потрапляє в БД через відтворюваний seed |
+| Validation/mapping | немає, seed записує значення напряму | `Text = Lab05Marker` | значення не стає trusted |
+| Storage | сутність `IncidentComment.Text` у PostgreSQL | marker без змін | збережене значення користувача |
+| Response | `Application/Incidents/IncidentQueries.cs`, `GetDetailsAsync` → `IncidentCommentResponse.Text`; GET `/api/incidents/{id}` | JSON-поле `comments[].text`; internal comments бачить лише Analyst | недовірене для браузера |
+| Client transform | `Client/browser-lab.js`, функція `load`, цикл `for (const comment of current.comments ?? [])` | `comment.text` без змін | дані передаються як є |
+| Sink/context до fix | `browser-lab.js`, р. 14: `paragraph.innerHTML = comment.text` | `<p>` у `#comments` | **HTML-контекст, небезпечно**; рис. 25–26 |
+| Sink/context після fix | `browser-lab.js`: `setText(document.createElement("p"), comment.text)` | `<p>` у `#comments` | текстовий вузол, безпечно; рис. 28–29 |
+
+Висновок: коментар проходить той самий шлях, що й опис, тому обидва поля виправлено одним helper `setText`, а не окремими латками.
