@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using SecureLab.Api.Data;
 using SecureLab.Api.Data.Entities;
-using System.Security.Claims;
 using SecureLab.Api.Presentation.Endpoints;
+using SecureLab.Api.Security;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace SecureLab.Api.Scaffolding;
 
@@ -58,7 +59,7 @@ public static class Lab02Endpoints
                 .ToListAsync(ct);
 
             return Results.Ok(items);
-        });
+        }).RequireRateLimiting("search");
         app.MapPost("/api/incidents", async (CreateIncidentRequest request, HttpContext httpContext, SecureLabDbContext db, CancellationToken ct) =>
         {
             // Owner береться лише з перевіреного principal, а не з body чи header
@@ -138,7 +139,7 @@ public static class Lab02Endpoints
                 incident.OccurredAtUtc, incident.CreatedAtUtc, incident.UpdatedAtUtc);
 
             return Results.Created($"/api/incidents/{incident.Id}", response);
-        }).RequireAuthorization();
+        }).RequireAuthorization().AddEndpointFilter<AntiforgeryFilter>();
 
         app.MapPut("/api/incidents/{id:guid}", async (Guid id, UpdateIncidentRequest request,
              HttpContext httpContext, SecureLabDbContext db, CancellationToken ct) =>
@@ -179,11 +180,11 @@ public static class Lab02Endpoints
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
 
-        }).RequireAuthorization();
-    
+        }).RequireAuthorization().AddEndpointFilter<AntiforgeryFilter>();
 
-            //delete — рішення авторизації до видалення
-            app.MapDelete("/api/incidents/{id:guid}", async (Guid id,
+
+        //delete — рішення авторизації до видалення
+        app.MapDelete("/api/incidents/{id:guid}", async (Guid id,
             HttpContext httpContext, SecureLabDbContext db, CancellationToken ct) =>
             {
             if (!Guid.TryParse(httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
@@ -212,7 +213,7 @@ public static class Lab02Endpoints
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
 
-            }).RequireAuthorization();
+            }).RequireAuthorization().AddEndpointFilter<AntiforgeryFilter>();
 
         //fixed: triage лише для Analyst і лише New -> Triaged
         app.MapPost("/api/incidents/{id:guid}/triage", async (Guid id, HttpContext httpContext,
@@ -250,7 +251,7 @@ public static class Lab02Endpoints
             incident.UpdatedAtUtc = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { incident.Id, Status = incident.Status.ToString() });
-        }).RequireAuthorization();
+        }).RequireAuthorization().AddEndpointFilter<AntiforgeryFilter>();
 
     }
 

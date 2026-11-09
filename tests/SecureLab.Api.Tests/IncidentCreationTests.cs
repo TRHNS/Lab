@@ -16,6 +16,7 @@ public class IncidentCreationTests(SecureLabApiFactory factory) : IClassFixture<
     public async Task T02_ValidationFails_Returns400()
     {
         using var client = await factory.LoginAsync("alice", Password);
+        await client.UseAntiforgeryTokenAsync();
 
         var request = new Lab02Endpoints.CreateIncidentRequest(
             Title: "Check T-02",
@@ -27,12 +28,15 @@ public class IncidentCreationTests(SecureLabApiFactory factory) : IClassFixture<
         var response = await client.PostAsJsonAsync("/api/incidents", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(problem.GetProperty("errors").TryGetProperty("severity", out _));
     }
 
     [Fact]
     public async Task T03_DuplicateTitle_Returns409()
     {
         using var client = await factory.LoginAsync("alice", Password);
+        await client.UseAntiforgeryTokenAsync();
         var title = $"Regression-{Guid.NewGuid():N}";
 
         var request = new Lab02Endpoints.CreateIncidentRequest(

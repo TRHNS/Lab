@@ -72,6 +72,7 @@ public class AuthorizationTests(SecureLabApiFactory factory) : IClassFixture<Sec
     public async Task A04_AliceCannotUpdateBobIncident()
     {
         using var alice = await factory.LoginAsync("alice", Password);
+        await alice.UseAntiforgeryTokenAsync();
 
         var response = await alice.PutAsJsonAsync($"/api/incidents/{DbSeeder.BobIncidentId}", new
         {
@@ -103,6 +104,7 @@ public class AuthorizationTests(SecureLabApiFactory factory) : IClassFixture<Sec
     public async Task A06_ReporterCannotTriage()
     {
         using var alice = await factory.LoginAsync("alice", Password);
+        await alice.UseAntiforgeryTokenAsync();
         var id = await CreateIncident(alice);
 
         var response = await alice.PostAsync($"/api/incidents/{id}/triage", null);
@@ -118,8 +120,10 @@ public class AuthorizationTests(SecureLabApiFactory factory) : IClassFixture<Sec
     public async Task A07_AnalystCanTriageNewIncident()
     {
         using var alice = await factory.LoginAsync("alice", Password);
+        await alice.UseAntiforgeryTokenAsync();
         var id = await CreateIncident(alice);
         using var morgan = await factory.LoginAsync("morgan", Password);
+        await morgan.UseAntiforgeryTokenAsync();
 
         var response = await morgan.PostAsync($"/api/incidents/{id}/triage", null);
 

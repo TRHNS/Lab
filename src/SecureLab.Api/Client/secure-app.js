@@ -60,12 +60,14 @@ document.querySelector("#login-form").addEventListener("submit", async e => {
     const response = await postJson("/api/auth/login", data);
     form.elements.password.value = "";
     loginResult.textContent = `Login: ${response.status}`;
+    if (response.status === 204) SecureLabCsrf.reset();
     if (response.status === 204) await loadProfile();
 });
 
 // Вихід
 document.querySelector("#logout-button").addEventListener("click", async () => {
-    const response = await apiFetch("/api/auth/logout", { method: "POST" });
+    const response = await SecureLabCsrf.mutate("/api/auth/logout", { method: "POST" });
+    SecureLabCsrf.reset();
     loginResult.textContent = `Logout: ${response.status}`;
     incidentResult.textContent = "";
     await loadProfile(); 
@@ -76,11 +78,13 @@ document.querySelector("#incident-form").addEventListener("submit", async e => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
-    const response = await postJson("/api/incidents", {
+    const response = await SecureLabCsrf.mutate("/api/incidents", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         title: data.get("title"),
         description: data.get("description"),
         severity: data.get("severity"),
-        occurredAtUtc: new Date(data.get("occurredAt")).toISOString()
+            occurredAtUtc: new Date(data.get("occurredAt")).toISOString()
+        })
     });
     if (response.status === 201) {
         const created = await response.json();
