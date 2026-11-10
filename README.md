@@ -77,7 +77,11 @@ environment. Вона знищує поточні локальні навчал�
 БД `securelab`, але не видаляє саму БД або її схему.
 
 ## 4. Перевірка
+```
+Тести входять під seed-акаунтами, тому перед запуском задайте пароль поза Git:
 
+read -s -p "Seed password: " SeedUsers__Password; export SeedUsers__Password
+```
 Коли PostgreSQL уже працює:
 
 ```bash
@@ -129,7 +133,7 @@ docs/                    карта архітектури, варіант, ма
 | Ознака | Перевірка |
 |---|---|
 | `connection refused` до PostgreSQL | `docker compose ... ps`, порт `54329`, стан healthcheck |
-| SDK не знайдено | `dotnet --version` має повернути `10.0.302` у цій директорії |
+| SDK не знайдено | `dotnet --version` має повернути `10.0.100` у цій директорії |
 | порт API зайнятий | зупиніть інший процес на `5080` або задайте `ASPNETCORE_URLS` |
 | migration не застосовується | перевірте `ASPNETCORE_ENVIRONMENT=Development` і connection string |
 | змінили credentials у compose | узгоджено перевизначте `ConnectionStrings__SecureLab`; не записуйте реальне значення до Git |
