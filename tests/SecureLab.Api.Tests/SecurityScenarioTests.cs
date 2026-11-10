@@ -93,6 +93,7 @@ public class SecurityScenarioTests(SecureLabApiFactory factory) : IClassFixture<
     public async Task A04_CreateWithoutOwner_OwnerFromPrincipal()
     {
         using var client = await factory.LoginAsync("bob", Password);
+        await client.UseAntiforgeryTokenAsync();
 
         using var response = await client.PostAsJsonAsync("/api/incidents", new
         {
@@ -113,6 +114,7 @@ public class SecurityScenarioTests(SecureLabApiFactory factory) : IClassFixture<
     public async Task A05_CreateWithForeignOwner_OwnerStaysPrincipal()
     {
         using var client = await factory.LoginAsync("bob", Password);
+        await client.UseAntiforgeryTokenAsync();
 
         using var response = await client.PostAsJsonAsync("/api/incidents", new
         {
@@ -133,6 +135,7 @@ public class SecurityScenarioTests(SecureLabApiFactory factory) : IClassFixture<
     public async Task A06_Logout_ThenProtectedRequestReturns401()
     {
         using var client = await factory.LoginAsync("alice", Password);
+        await client.UseAntiforgeryTokenAsync();
 
         // До logout сеанс активний
         using var before = await client.GetAsync("/api/me");

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using SecureLab.Api.Data;
 using SecureLab.Api.Data.Entities;
 using System.Security.Claims;
+using SecureLab.Api.Security;
 
 namespace SecureLab.Api.Scaffolding;
 
@@ -111,7 +112,7 @@ public static class Lab03Identity
                 "logout", "success", userId, httpContext.TraceIdentifier);
 
             return Results.NoContent();
-        });
+        }).AddEndpointFilter<AntiforgeryFilter>();
 
         app.MapGet("/api/me", (HttpContext context) =>
         {
