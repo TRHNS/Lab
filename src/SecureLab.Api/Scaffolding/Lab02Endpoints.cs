@@ -247,9 +247,30 @@ public static class Lab02Endpoints
                     statusCode: StatusCodes.Status409Conflict);
 
             // наступний статус визначає сервер, а не клієнт
+            var oldStatus = incident.Status;
+            var now = DateTimeOffset.UtcNow;
             incident.Status = IncidentStatus.Triaged;
-            incident.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            incident.UpdatedAtUtc = now;
+
+            // ЛР 6: audit trail дозволеного переходу — запис в історії статусів
+            db.IncidentStatusHistory.Add(new IncidentStatusHistory
+            {
+                Id = Guid.NewGuid(),
+                IncidentId = incident.Id,
+                ChangedByUserId = userId,
+                OldStatus = oldStatus,
+                NewStatus = incident.Status,
+                Note = "triage",
+                CreatedAtUtc = now
+            });
             await db.SaveChangesAsync(ct);
+
+            // Audit-подія в журналі: лише ідентифікатори, без тіла запиту, cookie й токенів
+            logger.LogInformation(
+                "Audit {EventType}: user {UserId}, action {Action}, incident {IncidentId}, result {Result}, {OldStatus} -> {NewStatus}, at {OccurredAtUtc}, trace {TraceId}",
+                "incident.status_changed", userId, "incident.triage", incident.Id, "allowed",
+                oldStatus, incident.Status, now, Activity.Current?.Id ?? httpContext.TraceIdentifier);
+
             return Results.Ok(new { incident.Id, Status = incident.Status.ToString() });
         }).RequireAuthorization().AddEndpointFilter<AntiforgeryFilter>();
 
